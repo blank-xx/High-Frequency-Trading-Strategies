@@ -1,161 +1,113 @@
-High-Frequency Trading Strategies
-This project implements machine learning-based strategies for high-frequency trading (HFT). The primary goal is to develop a system that processes and analyzes stock market data, retrains predictive models, and automates decision-making for executing trades. The models are continuously updated using a CI/CD pipeline, ensuring that the trading strategies stay relevant in dynamic market conditions.
+# Stock Market Sentiment Analysis
 
-Table of Contents
-Project Overview
-Features
-Installation
-Data Pipeline
-Machine Learning Models
-CI/CD Pipeline
-Monitoring and Alerts
-Usage
-License
-Project Overview
-High-Frequency Trading (HFT) relies on processing market data at lightning-fast speeds to make profitable trades. This project leverages machine learning models for the following tasks:
+A Python prototype that pulls stock prices and related tweets, cleans the tweet text with NLP tools, and sets up a simple model to classify sentiment as positive or negative.
 
-Predicting stock price movement
-Automating trade execution based on model predictions
-Continuously improving models through real-time data collection and retraining
-Monitoring model performance in real-time
-Key technologies used in this project:
+> **Project status:** Working prototype. The sentiment model currently uses placeholder labels, so its accuracy is not meaningful yet. See [Limitations](#limitations) and [Next Steps](#next-steps).
 
-Machine Learning Frameworks: TensorFlow, PyTorch
-CI/CD Pipeline: GitHub Actions
-Monitoring Tools: Prometheus, Grafana
-Data Sources: Yahoo Finance, Twitter API (for sentiment analysis)
-Features
-Data Collection: Uses Yahoo Finance API and sentiment analysis from Twitter.
-Model Training: Builds and trains models for stock price prediction.
-Real-Time Trading: Integrates with a brokerage API to execute trades.
-Automated Model Retraining: New data automatically triggers retraining of models via the CI/CD pipeline.
-Performance Monitoring: Provides real-time dashboards and alerts using Prometheus and Grafana.
-Installation
-Prerequisites
-Docker: Ensure Docker is installed and running.
-Python 3.9+
-Git
-Virtualenv (optional but recommended)
-Steps
-Clone the repository:
+## What It Does
 
-bash
-Copy code
-git clone https://github.com/yourusername/hft-strategies.git
-cd hft-strategies
-Create a virtual environment (optional):
+1. **Collects stock prices** from Yahoo Finance (using `yfinance`) and plots the closing price over time.
+2. **Collects tweets** about a stock (for example, "AAPL stock") through the Twitter API (using `tweepy`).
+3. **Cleans the tweet text**: removes links and emojis, converts to lowercase, tokenizes with a BERT tokenizer, and reduces words to their base form with spaCy.
+4. **Converts words to numbers** using pre-trained GloVe word embeddings (100 dimensions).
+5. **Classifies sentiment** (positive or negative) with a logistic regression model and prints the accuracy.
 
-bash
-Copy code
+## Tools Used
+
+| Purpose | Tool |
+|---|---|
+| Stock data | yfinance, pandas |
+| Tweets | tweepy (Twitter API) |
+| Text cleaning | clean-text, spaCy, BERT tokenizer (Hugging Face transformers) |
+| Word embeddings | GloVe (6B, 100d) |
+| Model and evaluation | scikit-learn (logistic regression) |
+| Charts | matplotlib |
+
+## Getting Started
+
+### Requirements
+
+- Python 3.9 or newer
+- A Twitter (X) developer account with API access
+- The GloVe file `glove.6B.100d.txt` (download from the [Stanford GloVe page](https://nlp.stanford.edu/projects/glove/))
+
+### Installation
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/<your-username>/<repo-name>.git
+cd <repo-name>
+
+# 2. (Optional) create a virtual environment
 python -m venv venv
-source venv/bin/activate   # For Linux/Mac
-venv\Scripts\activate      # For Windows
-Install required dependencies:
+source venv/bin/activate        # Mac/Linux
+venv\Scripts\activate           # Windows
 
-bash
-Copy code
-pip install -r requirements.txt
-Set up Docker containers:
+# 3. Install the libraries
+pip install yfinance pandas numpy matplotlib scikit-learn tweepy transformers spacy clean-text
 
-bash
-Copy code
-docker build -t hft-strategies .
-docker run -p 8000:8000 hft-strategies
-(Optional) Install additional dependencies for GPU-based training:
+# 4. Download the spaCy English model
+python -m spacy download en_core_web_sm
+```
 
-bash
-Copy code
-pip install tensorflow-gpu
-Data Pipeline
-The data pipeline is responsible for collecting and preprocessing stock market data. It consists of the following steps:
+### Set Up Your Keys
 
-Data Collection: We use the yfinance library to collect historical stock price data and real-time prices.
-Sentiment Analysis: Twitter API is integrated to fetch relevant tweets and perform sentiment analysis using NLP models.
-Preprocessing: The stock data is cleaned, normalized, and converted into a format suitable for machine learning models.
-Example of Data Collection:
-python
-Copy code
-import yfinance as yf
+Open the main script and replace the placeholder values with your own Twitter API keys:
 
-data = yf.download("AAPL", start="2020-01-01", end="2023-01-01")
-print(data.head())
-Machine Learning Models
-The project uses machine learning models to predict stock prices based on historical data and sentiment analysis from social media platforms like Twitter.
+```python
+consumer_key = "your_consumer_key"
+consumer_secret = "your_consumer_secret"
+access_token = "your_access_token"
+access_token_secret = "your_access_token_secret"
+```
 
-LSTM Models: Used to predict stock price trends.
-NLP Models: Analyze market sentiment from Twitter data.
-Ensemble Models: Combine both stock price trends and sentiment analysis to make more accurate predictions.
-Model Training
-python
-Copy code
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
+Do not upload your real keys to GitHub. Store them in environment variables or a `.env` file that is listed in `.gitignore`.
 
-# Example LSTM model
-model = Sequential()
-model.add(LSTM(128, input_shape=(X_train.shape[1], X_train.shape[2])))
-model.add(Dense(1))
-model.compile(optimizer='adam', loss='mean_squared_error')
+Place `glove.6B.100d.txt` in the project folder (or update `glove_file_path` in the script).
 
-model.fit(X_train, y_train, epochs=50, batch_size=32)
-CI/CD Pipeline
-A GitHub Actions CI/CD pipeline automates the retraining of models and redeployment whenever new data is available.
+### Run
 
-GitHub Actions Workflow
-Create a .github/workflows/main.yml file in your project:
+```bash
+python main.py
+```
 
-yaml
-Copy code
-name: CI/CD for HFT Strategies
+The script will:
+- Show a chart of the stock's closing price (the default is AAPL from 2020 to 2022).
+- Fetch 100 recent tweets about the stock.
+- Print the model accuracy at the end.
 
-on:
-  push:
-    branches:
-      - main
-  schedule:
-    - cron: '0 0 * * *'  # Daily schedule
+To change the stock or dates, edit the `download_stock_data(...)` and `fetch_tweets(...)` calls in the main section of the script.
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.9
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-      - name: Run retraining script
-        run: python retrain.py
-Ensure your retrain.py script is in the root folder to retrain models with new data:
+## Project Structure
 
-bash
-Copy code
-python retrain.py
-Monitoring and Alerts
-We use Prometheus and Grafana for real-time monitoring of model performance and trading outcomes.
+| Function | What it does |
+|---|---|
+| `download_stock_data` | Downloads historical prices for a ticker |
+| `authenticate_twitter` | Connects to the Twitter API |
+| `fetch_tweets` | Gets tweets that match a search query |
+| `preprocess_text` | Cleans, tokenizes and simplifies tweet text |
+| `load_glove_embeddings` | Loads the GloVe word vectors |
+| `get_embeddings` | Turns words into vectors (unknown words become zeros) |
+| `sentiment_classification` | Trains logistic regression and predicts sentiment |
+| `visualize_stock_data` | Plots the closing price |
 
-Steps to Set Up Monitoring:
-Install Prometheus and Grafana using Docker:
+## Limitations
 
-bash
-Copy code
-docker run -d --name prometheus -p 9090:9090 prom/prometheus
-docker run -d --name grafana -p 3000:3000 grafana/grafana
-Configure Prometheus to collect metrics from your model, and set up Grafana for visualization.
+Being clear about what this prototype does not do yet:
 
-Set alerts in Grafana for key performance indicators like profit/loss, latency, and execution time.
+- **The sentiment labels are random placeholders.** The script creates them with a random generator so the pipeline can run end to end. Because of this, the printed accuracy does not reflect real performance.
+- **It does not predict stock prices yet.** It collects price data and analyses tweet sentiment, but the two are not combined into a price forecast.
+- **Small sample.** It uses 100 tweets for one stock by default.
+- **Twitter API access** is required and may depend on your API plan.
 
-Usage
-Train the Model:
+## Next Steps
 
-bash
-Copy code
-python train_model.py
-Start Trading: The trained models will automatically execute trades based on real-time predictions.
+- Train on a real labeled financial sentiment dataset instead of random labels.
+- Combine daily sentiment scores with price data to study how sentiment relates to price movement.
+- Try a time-series model (such as LSTM) for price prediction.
+- Move API keys to environment variables.
+- Add a `requirements.txt` file and a short results section.
 
-Monitor Performance: Open Grafana to view performance metrics in real-time:
+## License
 
-URL: http://localhost:3000
-Use Prometheus for monitoring system metrics.
+Add a license of your choice (for example, MIT).
